@@ -13,10 +13,12 @@
 #include <map>
 #include <vector>
 
+#include <TopExp.hxx>
 #include <TDF_Label.hxx>
 #include <TopoDS_Shape.hxx>
 #include <NCollection_DataMap.hxx>
 #include <TDF_LabelList.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
 
 class TDocStd_Document;
 /*! \class LabelUtilities
@@ -34,6 +36,10 @@ public:
     *  \brief LabelUtilities的析构函数.
     */
     ~LabelUtilities();
+
+    static void GetSubShapeLabels(Handle(TDF_Data) data,
+        const TopoDS_Shape& shape, const TopAbs_ShapeEnum& shapetype,
+        TDF_LabelList& labellist);
 
     /*! \fn static bool copyLabelWithoutFather(const TDF_Label& source, const TDF_Label& target)
     *  \brief 拷贝原Label节点下所有子节点数据到新的Label节点上.
@@ -129,6 +135,8 @@ public:
     */
 	static bool findNameLabel(const TDF_Label& label, const std::string& name, TDF_Label& retuanLabel);
 
+    static bool findNameLabel(const TDF_LabelList& labellist,
+        const std::string& name, TDF_Label& returnlabel);
     /*! \fn static TDF_Label getOwnerLabel(const TDF_Label& childLabel)
     *  \brief 获取childLabeld的次顶级节点，深度为root的下一级.
     *  \param childLabel 需要进行向上查找的节点.

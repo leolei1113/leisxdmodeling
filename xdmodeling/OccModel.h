@@ -9,12 +9,15 @@
 
 #include "xdModelingHeader.h"
 #include "OccBasicTools.h"
+#include "xlTopoDS_HShape.h"
 #include "GKModel.h"
 //#include "cmx.h"
 
 #include <list>
 #include <map>
 #include <vector>
+
+#include <TDF_LabelList.hxx>
 
 #define COMMAND_BEGIN \
     TheOCCApp.getCurrentModel()->BeginCommand();

@@ -350,6 +350,33 @@ bool LabelUtilities::findSubShapePIDsFromRoot(const TDF_Label& label, const TopA
 	}
 }
 
+bool LabelUtilities::findNameLabel(const TDF_LabelList& labellist,
+    const std::string& name, TDF_Label& returnlabel)
+{
+    try
+    {
+        TDF_LabelList::Iterator labeliter(labellist);
+        for (; labeliter.More(); labeliter.Next())
+        {
+            TDF_Label sourcerootlabel = labeliter.Value();
+            Handle(TDataStd_Name) namedata;
+            if (sourcerootlabel.FindAttribute(TDataStd_Name::GetID(), namedata))
+            {
+                if (!namedata.IsNull() && !namedata->Get().IsDifferent
+                (TCollection_ExtendedString(name.c_str())))
+                {
+                    returnlabel = sourcerootlabel;
+                    return true;
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
 bool LabelUtilities::findNameLabel(const TDF_Label& sourceRootLabel, const std::string& name, TDF_Label& retuanLabel)
 {
 	try
@@ -1125,4 +1152,22 @@ bool LabelUtilities::FindTypeLevelFatherLabel(TDF_Label& inputlabel, TopAbs_Shap
 		return true;
 	}
 	return false;
+}
+
+void LabelUtilities::GetSubShapeLabels(Handle(TDF_Data) data,
+    const TopoDS_Shape& shape, const TopAbs_ShapeEnum& shapetype,
+    TDF_LabelList& labellist)
+{
+    TopTools_IndexedMapOfShape shapemap;
+    TopExp::MapShapes(shape, shapetype, shapemap);
+    TopTools_IndexedMapOfShape::Iterator iter(shapemap);
+
+    for (; iter.More();iter.Next())
+    {
+        TopoDS_Shape subshape = iter.Value();
+        TDF_Label foundlabel;
+        if(!LabelUtilities::findShapeLabelFromRoot(data->Root(),subshape,foundlabel))
+            continue;
+        labellist.Append((foundlabel);
+    }
 }

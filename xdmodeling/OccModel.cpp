@@ -115,7 +115,10 @@ public:
 };
 
 //recursive add shape
-void addShapeCacheRecursive(const TDF_Label& parentLabel, std::map<std::string, TopoDS_HShape*>& shapeCache, void*& topEntity, const bool& topLevel = false)
+void addShapeCacheRecursive(const TDF_Label& parentLabel, 
+    NCollection_DataMap<TopoDS_Shape,xlTopoDS_HShape*,TopTools_ShapeMapHasher>& strshapeCache
+    , std::map<std::string, TopoDS_HShape*>& shapeCache, void*& topEntity, 
+    const bool& topLevel = false)
 {
     try
     {
@@ -127,7 +130,9 @@ void addShapeCacheRecursive(const TDF_Label& parentLabel, std::map<std::string, 
             TopoDS_Shape labelShape = ObjectNS->Get();
             if (!labelShape.IsNull())
             {
-                TopoDS_HShape* hShape = new TopoDS_HShape(labelShape);
+                xlTopoDS_HShape* hShape = new xlTopoDS_HShape(labelShape);
+                hShape->setpid(entryInstance.ToCString());
+                strshapeCache.Bind(labelShape, hShape);
                 shapeCache.insert(std::pair<std::string, TopoDS_HShape*>(entryInstance.ToCString(),hShape));
                 if (topLevel)
                 {
@@ -139,12 +144,85 @@ void addShapeCacheRecursive(const TDF_Label& parentLabel, std::map<std::string, 
         TDF_ChildIterator childIter(parentLabel);
         for (; childIter.More(); childIter.Next())
         {
-            addShapeCacheRecursive(childIter.Value(), shapeCache, topEntity);
+            addShapeCacheRecursive(childIter.Value(), strshapeCache, shapeCache, topEntity);
         }
     }
     catch (...)
     {
     }
+}
+
+bool CheckHasSameNameEntity(const TDF_LabelList& labelList, int istartidx)
+{
+    bool bhassamename = false;
+    std::vector<string> facenamelist;
+    string facestr;
+    TDF_LabelList::Iterator iter(labelList);
+    int i = 0;
+    for (; iter.More(); iter.Next(), i++)
+    {
+        if(i<istartidx)
+            continue;
+        bool hasname = LabelUtilities::getLabelName(iter.Value(), facestr);
+        if (hasname)
+        {
+            if (std::find(facenamelist.begin(), facenamelist.end(), facestr)
+                == facenamelist.end())
+            {
+                facenamelist.push_back(facestr);
+            }
+            else
+            {
+                bhassamename = true;
+                break;
+            }
+        }
+    }
+    return bhassamename;
+}
+
+void splite(const std::string& orgstr, std::vector<std::string>* sv, const char* separator)
+{
+    std::string str = orgstr;
+    str += separator;
+    int size = strlen(separator);
+    int n = str.find(separator);
+    while (n != -1)
+    {
+        string cutstr = str.substr(0, n);
+        sv->emplace_back(cutstr);
+        str = str.substr(n + size);
+        n = str.find(separator);
+    }
+}
+
+void* getFaceByuuid(Handle(TDF_Data) data, xlTopoDS_HShape* ownerent,
+    const std::string& uuid)
+{
+    void* foundent = nullptr;
+
+    TDF_LabelList labellist;
+    TDF_Label returnlabel;
+    LabelUtilities::GetSubShapeLabels(data, ownerent->Shape(), TopAbs_FACE, labellist);
+    if (LabelUtilities::findNameLabel(labellist, uuid, returnlabel))
+    {
+        string strpid = LabelUtilities::getLabelPID(returnlabel);
+        foundent = findEntityFromCacheMap(strpid);
+    }
+    return foundent;
+}
+
+void* OccModel::findEntityFromCacheMap(const std::string& strPID)
+{
+	for (std::map<std::string, TopoDS_HShape*>::iterator iter = m_data->shapeCache.begin(); iter != m_data->shapeCache.end(); ++iter)
+	{
+		if (strPID == iter->first && iter->second)
+		{
+			return iter->second;
+		}
+	}
+
+	return nullptr;
 }
 
 OccModel::OccModel(TDocStd_Document* doc)
@@ -433,18 +511,7 @@ void OccModel::deleteShapeToCacheByEntryOnSecond(const std::string& strPID)
     }
 }
 
-void* OccModel::findEntityFromCacheMap(const std::string& strPID)
-{
-    for (std::map<std::string, TopoDS_HShape*>::iterator iter = m_data->shapeCache.begin(); iter != m_data->shapeCache.end(); ++iter)
-    {
-        if (strPID == iter->first&& iter->second)
-        {
-            return iter->second;
-        }
-    }
 
-    return nullptr;
-}
 
 TDocStd_Document* OccModel::getDoc() const
 {
