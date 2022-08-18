@@ -118,7 +118,7 @@ bool ShapeUtilities::shapeCover(const TopoDS_Shape& origShape, TopoDS_Shape& cov
             return false;
         }
         coveredShape = builder.Shape();
-        break;
+        break£»
     }
     case TopAbs_SOLID:
     {
